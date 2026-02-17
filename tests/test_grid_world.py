@@ -1,4 +1,5 @@
 from q_link_rpg.engine.grid_world import GridWorld
+import pytest
 
 
 def test_grid_initialization(grid_config):
@@ -40,3 +41,19 @@ def test_reset_grid(grid_config):
     grid.hero_pos = (5, 5)  # Move hero manually
     grid.reset()
     assert grid.hero_pos == (0, 0)
+
+
+def test_load_level_not_implemented():
+    """Test that load_level raises NotImplementedError for now."""
+    grid = GridWorld(10, 10, (0, 0), (9, 9))
+    with pytest.raises(NotImplementedError):
+        grid.load_level(1)
+
+
+def test_state_representation_includes_level(grid_config):
+    """Test that the state includes level_id."""
+    grid = GridWorld(10, 10, (0, 0), (9, 9), level_id=1)
+    # Coordinate-based state (hero_x, hero_y, enemy_positions, level_id)
+    # For now, let's assume get_state() returns a tuple
+    state = grid.get_state()
+    assert state[-1] == 1  # Check if level_id is the last element

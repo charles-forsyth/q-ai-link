@@ -8,12 +8,14 @@ class GridWorld:
         height: int,
         start_pos: Tuple[int, int],
         goal_pos: Tuple[int, int],
+        level_id: int = 1,
     ):
         self.width = width
         self.height = height
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.hero_pos = start_pos
+        self.level_id = level_id
         self.walls: Set[Tuple[int, int]] = set()
         self.enemies: Set[Tuple[int, int]] = set()
 
@@ -32,3 +34,11 @@ class GridWorld:
     def reset(self) -> None:
         """Reset the hero to the start position."""
         self.hero_pos = self.start_pos
+
+    def load_level(self, level_id: int) -> None:
+        """Load a specific level configuration."""
+        raise NotImplementedError("Level loading logic is handled externally for now.")
+
+    def get_state(self) -> Tuple[int, int, int]:
+        """Return the current state representation."""
+        return (*self.hero_pos, self.level_id)
