@@ -55,12 +55,14 @@ def human(
             renderer.draw(grid, score=reward)
             if done:
                 print(f"Game Over! Reward: {reward}")
-                time.sleep(1)
+                if not headless:
+                    time.sleep(1)
                 grid.reset()
                 renderer.draw(grid)  # Redraw reset state
 
         renderer.draw(grid)
-        time.sleep(0.01)  # Small delay to reduce CPU usage
+        if not headless:
+            time.sleep(0.01)  # Small delay to reduce CPU usage
 
     renderer.close()
 
@@ -124,6 +126,9 @@ def watch(
         print(f"Error: Q-table file '{load_path}' not found. Train first!")
         return
 
+    if headless:
+        delay = 0.0
+
     renderer = GameRenderer(DEFAULT_WIDTH, DEFAULT_HEIGHT, headless=headless)
 
     for episode in range(episodes):
@@ -143,10 +148,12 @@ def watch(
             total_reward += reward
 
             renderer.draw(grid, episode=episode + 1, score=total_reward)
-            time.sleep(delay)
+            if delay > 0:
+                time.sleep(delay)
 
         print(f"Episode {episode + 1} Finished. Total Reward: {total_reward}")
-        time.sleep(1)
+        if not headless:
+            time.sleep(1)
 
     renderer.close()
 

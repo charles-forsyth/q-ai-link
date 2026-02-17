@@ -1,30 +1,27 @@
-# Design Doc: Fix GLX Errors (Headless Support)
+# Design Doc: Optimize Headless Mode for Speed
 
 ## Problem
-The `q-link-rpg` application uses Pygame for rendering. In environments without an X server or valid GLX configuration (e.g., CI/CD pipelines, remote servers via SSH), calling `pygame.display.set_mode()` or `pygame.init()` fails with GLX errors or "No available video device".
+Headless mode is intended for automated testing and CI/CD environments. However, the `watch` command currently respects the same `delay` and post-episode `time.sleep(1)` as the visual mode, making headless runs unnecessarily slow.
 
 ## Objective
-Enable the application to run in headless mode by falling back to a dummy video driver when a display is unavailable.
+Automatically bypass or minimize execution delays when the `--headless` flag is used, enabling faster verification.
 
 ## Strategy
-1.  **Auto-detection & Fallback:** Modify `GameRenderer` to attempt to initialize the display. If it fails, set `SDL_VIDEODRIVER=dummy` and retry.
-2.  **CLI Support:** Add an optional `--headless` flag to the CLI to explicitly force headless mode.
+1.  **Conditional Delay:** In the `watch` command, set `delay = 0` if `headless` is true, unless the user explicitly provided a non-default delay (actually, if they want it headless, they probably want it fast).
+2.  **Bypass Post-Episode Sleep:** Skip the `time.sleep(1)` after an episode finishes if `headless` is true.
+3.  **Engine Optimization:** Ensure the renderer's `draw` calls in headless mode are as lightweight as possible (which they should be with the dummy driver, but we should verify).
 
-## Technical Implementation (Python/Pygame)
-
-### `src/q_link_rpg/renderer.py`
-- In `GameRenderer.__init__`, check for an existing display or try to initialize.
-- Use a try-except block around `pygame.display.set_mode()`.
-- If `pygame.error` is caught, set `os.environ["SDL_VIDEODRIVER"] = "dummy"` and re-initialize.
-- Log a warning when falling back to dummy mode.
+## Technical Implementation (Python)
 
 ### `src/q_link_rpg/cli.py`
-- Add `--headless` option to `human` and `watch` commands using Typer.
-- Pass the `headless` flag to `GameRenderer`.
+- Modify `watch` command:
+    - If `headless` is `True`, force `delay` to `0.0` (or a very small value) and skip the final `time.sleep(1)`.
+- Modify `human` command:
+    - Similarly skip `time.sleep` in headless if applicable.
 
 ## Testing Plan
-1.  **Unit Test:** Mock Pygame initialization to simulate failure and verify the fallback logic in `GameRenderer`.
-2.  **Functional Test:** Run the application with `SDL_VIDEODRIVER=dummy` set externally and verify it starts without error.
+1.  **Unit Test:** Verify that `time.sleep` is not called with non-zero values during a headless `watch` run (using mocks).
+2.  **Functional Test:** Measure the execution time of `uv run q-link watch --episodes 1 --headless`. It should be near-instant.
 
 ## Toolchain
 - **Language:** Python 3.12+
