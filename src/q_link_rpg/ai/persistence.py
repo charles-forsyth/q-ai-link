@@ -21,5 +21,7 @@ def load_q_table(path: Union[str, Path]) -> np.ndarray:
         # allow_pickle=False is the default in newer numpy, but explicit is better for security
         q_table = np.load(path, allow_pickle=False)
         return q_table
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise ValueError(f"Failed to load Q-table: {e}")
