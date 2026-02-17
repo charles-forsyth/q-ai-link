@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 from q_link_rpg.engine.grid_world import GridWorld
 
 # Colors
@@ -10,23 +11,48 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (128, 128, 128)
 
+
 class GameRenderer:
-    def __init__(self, width: int, height: int, cell_size: int = 40):
+    def __init__(
+        self, width: int, height: int, cell_size: int = 40, headless: bool = False
+    ):
         self.width = width
         self.height = height
         self.cell_size = cell_size
         self.screen_width = width * cell_size
         self.screen_height = height * cell_size
-        
-        pygame.init()
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        self.headless = headless
+
+        if self.headless:
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+        try:
+            pygame.init()
+            self.screen = pygame.display.set_mode(
+                (self.screen_width, self.screen_height)
+            )
+        except pygame.error:
+            print("Display initialization failed. Falling back to dummy video driver.")
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+            pygame.quit()  # Reset pygame to apply environment variable
+            pygame.init()
+            self.screen = pygame.display.set_mode(
+                (self.screen_width, self.screen_height)
+            )
+
         pygame.display.set_caption("Q-Link RPG")
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("Arial", 24)
+        try:
+            self.font = pygame.font.SysFont("Arial", 24)
+        except pygame.error:
+            # Fallback if fonts also fail in headless mode
+            self.font = None
 
     def draw(self, grid: GridWorld, episode: int = 0, score: int = 0):
+        if not self.screen:
+            return
         self.screen.fill(WHITE)
-        
+
         # Draw Grid Lines
         for x in range(0, self.screen_width, self.cell_size):
             pygame.draw.line(self.screen, GRAY, (x, 0), (x, self.screen_height))
@@ -34,29 +60,39 @@ class GameRenderer:
             pygame.draw.line(self.screen, GRAY, (0, y), (self.screen_width, y))
 
         # Draw Walls
-        for (x, y) in grid.walls:
-            rect = pygame.Rect(x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size)
+        for x, y in grid.walls:
+            rect = pygame.Rect(
+                x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
+            )
             pygame.draw.rect(self.screen, BLACK, rect)
 
         # Draw Goal
         gx, gy = grid.goal_pos
-        rect = pygame.Rect(gx * self.cell_size, gy * self.cell_size, self.cell_size, self.cell_size)
+        rect = pygame.Rect(
+            gx * self.cell_size, gy * self.cell_size, self.cell_size, self.cell_size
+        )
         pygame.draw.rect(self.screen, GREEN, rect)
-        
+
         # Draw Enemies
-        for (ex, ey) in grid.enemies:
-            rect = pygame.Rect(ex * self.cell_size, ey * self.cell_size, self.cell_size, self.cell_size)
+        for ex, ey in grid.enemies:
+            rect = pygame.Rect(
+                ex * self.cell_size, ey * self.cell_size, self.cell_size, self.cell_size
+            )
             pygame.draw.rect(self.screen, RED, rect)
 
         # Draw Hero
         hx, hy = grid.hero_pos
         # Draw hero as a blue circle
-        center = (hx * self.cell_size + self.cell_size // 2, hy * self.cell_size + self.cell_size // 2)
+        center = (
+            hx * self.cell_size + self.cell_size // 2,
+            hy * self.cell_size + self.cell_size // 2,
+        )
         pygame.draw.circle(self.screen, BLUE, center, self.cell_size // 2 - 2)
 
         # Draw Info
-        text = self.font.render(f"Ep: {episode} Score: {score}", True, BLACK)
-        self.screen.blit(text, (5, 5))
+        if self.font:
+            text = self.font.render(f"Ep: {episode} Score: {score}", True, BLACK)
+            self.screen.blit(text, (5, 5))
 
         pygame.display.flip()
 

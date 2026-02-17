@@ -34,18 +34,20 @@ class GameLogic:
                 dy = 1
             elif move == 4:
                 dx = -1
-            
+
             nx, ny = ex + dx, ey + dy
-            
+
             # Check bounds and walls and goal (enemies shouldn't block goal?)
             # Let's say enemies can't walk into walls or goal or other enemies
-            if (0 <= nx < self.grid.width and 0 <= ny < self.grid.height) and \
-               ((nx, ny) not in self.grid.walls) and \
-               ((nx, ny) != self.grid.goal_pos) and \
-               ((nx, ny) not in new_enemies):
+            if (
+                (0 <= nx < self.grid.width and 0 <= ny < self.grid.height)
+                and ((nx, ny) not in self.grid.walls)
+                and ((nx, ny) != self.grid.goal_pos)
+                and ((nx, ny) not in new_enemies)
+            ):
                 new_enemies.add((nx, ny))
             else:
-                new_enemies.add((ex, ey)) # Stay if blocked
+                new_enemies.add((ex, ey))  # Stay if blocked
         self.grid.enemies = new_enemies
 
     def step(self, action: Action) -> Tuple[int, bool]:
@@ -56,7 +58,7 @@ class GameLogic:
         self._move_enemies()
 
         x, y = self.grid.hero_pos
-        
+
         # Check if enemy moved into hero
         if (x, y) in self.grid.enemies:
             return self.DEATH_PENALTY, True
