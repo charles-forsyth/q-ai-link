@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Link RPG Web</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify_content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            text-shadow: 0 0 10px #00ff00;
+        }
+        canvas {
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            background-color: #000;
+        }
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            background-color: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #ccffcc;
+        }
+        .info {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Q-Link RPG: Web Interface</h1>
+    
+    <div class="info">
+        Score: <span id="score">0</span> | Status: <span id="status">Active</span>
+    </div>
+
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+
+    <div id="controls">
+        <p>Use Arrow Keys to Move</p>
+        <button onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const statusEl = document.getElementById('status');
+        
+        const CELL_SIZE = 50;
+        let gameState = null;
+
+        // Load Images
+        const images = {};
+        const imageSources = {
+            background: '/static/images/background.png',
+            hero: '/static/images/agent.png',
+            goal: '/static/images/goal.png',
+            wall: '/static/images/obstacle.png',
+            enemy: '/static/images/enemy.png'
+        };
+
+        let imagesLoaded = 0;
+        const totalImages = Object.keys(imageSources).length;
+
+        for (let key in imageSources) {
+            images[key] = new Image();
+            images[key].src = imageSources[key];
+            images[key].onload = () => {
+                imagesLoaded++;
+                if (imagesLoaded === totalImages) {
+                    initGame();
+                }
+            };
+        }
+
+        async function initGame() {
+            await fetchState();
+            draw();
+        }
+
+        async function fetchState() {
+            const response = await fetch('/api/state');
+            gameState = await response.json();
+            updateUI();
+        }
+
+        function updateUI() {
+            if (!gameState) return;
+            scoreEl.textContent = gameState.score;
+            statusEl.textContent = gameState.game_over ? "GAME OVER" : "Active";
+        }
+
+        function draw() {
+            if (!gameState) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background (tiled or scaled)
+            // Assuming 10x10 grid, 50px cells = 500x500
+            ctx.drawImage(images.background, 0, 0, canvas.width, canvas.height);
+
+            // Draw Grid Lines (optional, for debugging or aesthetic)
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+            for (let i = 0; i <= gameState.width; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= gameState.height; j++) {
+                ctx.beginPath();
+                ctx.moveTo(0, j * CELL_SIZE);
+                ctx.lineTo(canvas.width, j * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw Walls
+            gameState.walls.forEach(pos => {
+                const [x, y] = pos;
+                ctx.drawImage(images.wall, x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            });
+
+            // Draw Enemies
+            gameState.enemies.forEach(pos => {
+                const [x, y] = pos;
+                ctx.drawImage(images.enemy, x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            });
+
+            // Draw Goal
+            const [gx, gy] = gameState.goal_pos;
+            ctx.drawImage(images.goal, gx * CELL_SIZE, gy * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+            // Draw Hero
+            const [hx, hy] = gameState.hero_pos;
+            ctx.drawImage(images.hero, hx * CELL_SIZE, hy * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            
+            if (gameState.game_over) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '40px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        async function sendAction(actionId) {
+            if (!gameState || gameState.game_over) return;
+            const response = await fetch(`/api/action/${actionId}`, { method: 'POST' });
+            gameState = await response.json();
+            updateUI();
+            draw();
+        }
+
+        async function resetGame() {
+            const response = await fetch('/api/reset', { method: 'POST' });
+            gameState = await response.json();
+            updateUI();
+            draw();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    sendAction(0); // UP
+                    break;
+                case 'ArrowRight':
+                    sendAction(1); // RIGHT
+                    break;
+                case 'ArrowDown':
+                    sendAction(2); // DOWN
+                    break;
+                case 'ArrowLeft':
+                    sendAction(3); // LEFT
+                    break;
+            }
+        });
+
+    </script>
+</body>
+</html>
