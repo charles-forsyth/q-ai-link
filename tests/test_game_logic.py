@@ -57,11 +57,11 @@ def test_reach_goal(logic):
 def test_enemy_collision(logic):
     """Test colliding with an enemy."""
     logic.grid.add_enemies([(1, 0)])
-    
+
     # Force enemy to stay (move=0)
     with patch("q_link_rpg.engine.game_logic.random.randint", return_value=0):
         reward, done = logic.step(Action.RIGHT)
 
-    assert logic.grid.hero_pos == (1, 0) # Hero moves onto enemy
+    assert logic.grid.hero_pos == (1, 0)  # Hero moves onto enemy
     assert done
     assert reward == logic.DEATH_PENALTY
