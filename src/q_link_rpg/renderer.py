@@ -1,106 +1,136 @@
 import pygame
-import sys
 import os
+from typing import Tuple, Optional
 from q_link_rpg.engine.grid_world import GridWorld
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-GRAY = (128, 128, 128)
-
+from q_link_rpg.engine.game_logic import Action
 
 class GameRenderer:
-    def __init__(
-        self, width: int, height: int, cell_size: int = 40, headless: bool = False
-    ):
-        self.width = width
-        self.height = height
-        self.cell_size = cell_size
-        self.screen_width = width * cell_size
-        self.screen_height = height * cell_size
-        self.headless = headless
+    CELL_SIZE = 40
+    screen: pygame.Surface
+    
+    # Colors (Forest Theme Fallback)
+    COLOR_BG = (34, 139, 34)  # Forest Green
+    COLOR_GRID = (50, 100, 50) # Darker Green
+    COLOR_HERO = (0, 255, 0)
+    COLOR_GOAL = (255, 215, 0)
+    COLOR_WALL = (139, 69, 19) # Saddle Brown (Trees/Wood)
+    COLOR_ENEMY = (255, 0, 0)
 
-        if self.headless:
+    def __init__(self, grid_width: int, grid_height: int, headless: bool = False):
+        self.width = grid_width
+        self.height = grid_height
+        
+        if headless:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
 
         try:
             pygame.init()
             self.screen = pygame.display.set_mode(
-                (self.screen_width, self.screen_height)
+                (self.width * self.CELL_SIZE, self.height * self.CELL_SIZE)
             )
+            pygame.display.set_caption("Q-Link RPG - Forest Edition")
         except pygame.error:
-            print("Display initialization failed. Falling back to dummy video driver.")
+            # Fallback for headless environments if explicit flag wasn't set but display failed
+            print("Warning: No video device available. Falling back to dummy driver.")
             os.environ["SDL_VIDEODRIVER"] = "dummy"
-            pygame.quit()  # Reset pygame to apply environment variable
             pygame.init()
             self.screen = pygame.display.set_mode(
-                (self.screen_width, self.screen_height)
+                (self.width * self.CELL_SIZE, self.height * self.CELL_SIZE)
             )
 
-        pygame.display.set_caption("Q-Link RPG")
-        self.clock = pygame.time.Clock()
-        try:
-            self.font = pygame.font.SysFont("Arial", 24)
-        except pygame.error:
-            # Fallback if fonts also fail in headless mode
-            self.font = None
+        # Load Images
+        self.images = {}
+        image_dir = os.path.join(os.path.dirname(__file__), "static", "images")
+        image_files = {
+            "background": "background.png",
+            "hero": "agent.png",
+            "goal": "goal.png",
+            "wall": "obstacle.png", # Trees/Rocks
+            "enemy": "enemy.png"
+        }
+        
+        for name, filename in image_files.items():
+            path = os.path.join(image_dir, filename)
+            if os.path.exists(path):
+                try:
+                    img = pygame.image.load(path).convert_alpha()
+                    if name == "background":
+                        # Tile background if needed or stretch? Let's tile.
+                        self.images[name] = img
+                    else:
+                        self.images[name] = pygame.transform.scale(img, (self.CELL_SIZE, self.CELL_SIZE))
+                except pygame.error:
+                    print(f"Warning: Could not load image {filename}")
 
-    def draw(self, grid: GridWorld, episode: int = 0, score: int = 0):
-        if not self.screen:
-            return
-        self.screen.fill(WHITE)
+    def render(self, grid: GridWorld):
+        # Draw Background
+        if "background" in self.images:
+            # Tile the background
+            bg_img = self.images["background"]
+            bg_w, bg_h = bg_img.get_size()
+            for x in range(0, self.width * self.CELL_SIZE, bg_w):
+                for y in range(0, self.height * self.CELL_SIZE, bg_h):
+                    self.screen.blit(bg_img, (x, y))
+        else:
+            self.screen.fill(self.COLOR_BG)
 
-        # Draw Grid Lines
-        for x in range(0, self.screen_width, self.cell_size):
-            pygame.draw.line(self.screen, GRAY, (x, 0), (x, self.screen_height))
-        for y in range(0, self.screen_height, self.cell_size):
-            pygame.draw.line(self.screen, GRAY, (0, y), (self.screen_width, y))
+        # Draw Grid (optional on image background, maybe semi-transparent?)
+        # Let's keep grid lines for clarity
+        for x in range(0, self.width * self.CELL_SIZE, self.CELL_SIZE):
+            pygame.draw.line(self.screen, self.COLOR_GRID, (x, 0), (x, self.height * self.CELL_SIZE))
+        for y in range(0, self.height * self.CELL_SIZE, self.CELL_SIZE):
+            pygame.draw.line(self.screen, self.COLOR_GRID, (0, y), (self.width * self.CELL_SIZE, y))
 
         # Draw Walls
-        for x, y in grid.walls:
-            rect = pygame.Rect(
-                x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
-            )
-            pygame.draw.rect(self.screen, BLACK, rect)
-
-        # Draw Goal
-        gx, gy = grid.goal_pos
-        rect = pygame.Rect(
-            gx * self.cell_size, gy * self.cell_size, self.cell_size, self.cell_size
-        )
-        pygame.draw.rect(self.screen, GREEN, rect)
+        for wall in grid.walls:
+            self._draw_cell(wall, self.COLOR_WALL, "wall")
 
         # Draw Enemies
-        for ex, ey in grid.enemies:
-            rect = pygame.Rect(
-                ex * self.cell_size, ey * self.cell_size, self.cell_size, self.cell_size
-            )
-            pygame.draw.rect(self.screen, RED, rect)
+        for enemy in grid.enemies:
+            self._draw_cell(enemy, self.COLOR_ENEMY, "enemy")
+
+        # Draw Goal
+        self._draw_cell(grid.goal_pos, self.COLOR_GOAL, "goal")
 
         # Draw Hero
-        hx, hy = grid.hero_pos
-        # Draw hero as a blue circle
-        center = (
-            hx * self.cell_size + self.cell_size // 2,
-            hy * self.cell_size + self.cell_size // 2,
-        )
-        pygame.draw.circle(self.screen, BLUE, center, self.cell_size // 2 - 2)
-
-        # Draw Info
-        if self.font:
-            text = self.font.render(f"Ep: {episode} Score: {score}", True, BLACK)
-            self.screen.blit(text, (5, 5))
+        self._draw_cell(grid.hero_pos, self.COLOR_HERO, "hero")
 
         pygame.display.flip()
 
-    def handle_events(self):
+    def _draw_cell(self, pos: Tuple[int, int], color: Tuple[int, int, int], image_key: Optional[str] = None):
+        x, y = pos
+        if image_key and image_key in self.images:
+            self.screen.blit(self.images[image_key], (x * self.CELL_SIZE, y * self.CELL_SIZE))
+        else:
+            rect = (
+                x * self.CELL_SIZE + 2,
+                y * self.CELL_SIZE + 2,
+                self.CELL_SIZE - 4,
+                self.CELL_SIZE - 4
+            )
+            pygame.draw.rect(self.screen, color, rect)
+
+    def process_input(self) -> Tuple[Optional[Action], bool]:
+        """
+        Process Pygame events.
+        Returns:
+            (action, should_quit): action is the move to make (or None), should_quit is True if window closed.
+        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                return None, True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    return Action.UP, False
+                elif event.key == pygame.K_RIGHT:
+                    return Action.RIGHT, False
+                elif event.key == pygame.K_DOWN:
+                    return Action.DOWN, False
+                elif event.key == pygame.K_LEFT:
+                    return Action.LEFT, False
+                elif event.key == pygame.K_ESCAPE:
+                    return None, True
+        return None, False
 
     def close(self):
         pygame.quit()

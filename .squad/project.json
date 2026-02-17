@@ -1,6 +1,6 @@
 {
   "project_name": "new-project",
-  "mission": "Create a Python project called q-link-rpg. It must be a 2D tile-based Grid World game using Pygame (Headless capable).   Core Requirements:   1. Game Engine: A simple grid world with a Hero, Walls, Enemies (random movement), and a Goal.   2. Rendering: Separate logic from rendering. Support a --headless flag for fast training.   3. AI Agent: Implement a Q-Learning agent (Tabular Q-learning). It must learn to navigate to the Goal while avoiding Enemies.   4. CLI Interface:      - human: Play manually with arrow keys.      - train: Train the agent for N episodes (e.g., q-link train --episodes 1000). Save the Q-table.  - watch: Watch the trained agent play (load Q-table).5. Tech Stack: Python 3.12+, pygame, numpy (for Q-table), uv for packaging. Ensure the Gatekeeper audits the Q-table saving/loading for safety.",
+  "mission": "add many more levels and change the background to be a forest theme",
   "status": "active",
   "version": "0.1.0",
   "current_phase": "design",
