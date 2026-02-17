@@ -1,16 +1,13 @@
 import typer
 import time
 import os
-import random
-import numpy as np
-from pathlib import Path
 from q_link_rpg.engine.grid_world import GridWorld
 from q_link_rpg.engine.game_logic import GameLogic, Action
 from q_link_rpg.ai.agent import QLearningAgent
 from q_link_rpg.renderer import GameRenderer
-from typing import Optional
 
 app = typer.Typer()
+
 
 def create_level(level_id: int) -> GridWorld:
     if level_id == 1:
@@ -36,7 +33,8 @@ def create_level(level_id: int) -> GridWorld:
         grid = GridWorld(20, 20, (0, 0), (19, 19))
         # Larger grid, scattered walls
         import random
-        random.seed(42) # Fixed seed for reproducibility
+
+        random.seed(42)  # Fixed seed for reproducibility
         for _ in range(30):
             x, y = random.randint(0, 19), random.randint(0, 19)
             if (x, y) not in [(0, 0), (19, 19)]:
@@ -44,7 +42,9 @@ def create_level(level_id: int) -> GridWorld:
     elif level_id == 7:
         grid = GridWorld(10, 10, (0, 0), (9, 9))
         # Enemy swarm
-        grid.add_enemies([(i, j) for i in range(3, 8) for j in range(3, 8) if (i+j)%2 == 0])
+        grid.add_enemies(
+            [(i, j) for i in range(3, 8) for j in range(3, 8) if (i + j) % 2 == 0]
+        )
     elif level_id == 8:
         grid = GridWorld(20, 20, (0, 0), (19, 19))
         # Open field, few enemies
@@ -61,14 +61,19 @@ def create_level(level_id: int) -> GridWorld:
         for x in range(20):
             for y in range(20):
                 if (x + y) % 2 == 1 and (x, y) not in [(0, 0), (19, 19)]:
-                     if random.random() < 0.3:
-                         grid.add_walls([(x, y)])
+                    if random.random() < 0.3:
+                        grid.add_walls([(x, y)])
     else:
         raise ValueError(f"Invalid level ID: {level_id}")
     return grid
 
+
 @app.command()
-def train(episodes: int = 1000, level: int = 1, save_path: str = typer.Option("q_table.npy", "--save-path")):
+def train(
+    episodes: int = 1000,
+    level: int = 1,
+    save_path: str = typer.Option("q_table.npy", "--save-path"),
+):
     """
     Train a Q-Learning agent on a specific level.
     """
@@ -91,23 +96,30 @@ def train(episodes: int = 1000, level: int = 1, save_path: str = typer.Option("q
             steps += 1
             action_idx = agent.choose_action(state, epsilon=0.1)
             action = Action(action_idx)
-            
+
             reward, done = logic.step(action)
             next_state = grid.hero_pos
-            
+
             agent.learn(state, action_idx, reward, next_state, done)
             state = next_state
-        
+
         if (episode + 1) % 100 == 0:
             typer.echo(f"Episode {episode + 1}/{episodes} completed.")
-        
+
         grid.reset()
 
     agent.save(save_path)
     typer.echo(f"Training complete. Q-table saved to {save_path}")
 
+
 @app.command()
-def watch(load_path: str = typer.Option(..., "--load-path"), episodes: int = 5, level: int = 1, delay: float = 0.1, headless: bool = False):
+def watch(
+    load_path: str = typer.Option(..., "--load-path"),
+    episodes: int = 5,
+    level: int = 1,
+    delay: float = 0.1,
+    headless: bool = False,
+):
     """
     Watch a trained agent play on a specific level.
     """
@@ -139,7 +151,7 @@ def watch(load_path: str = typer.Option(..., "--load-path"), episodes: int = 5, 
             done = False
             steps = 0
             max_steps = 1000
-            
+
             while not done and steps < max_steps:
                 steps += 1
                 # Process input to keep window responsive and check for quit
@@ -149,24 +161,25 @@ def watch(load_path: str = typer.Option(..., "--load-path"), episodes: int = 5, 
                     return
 
                 renderer.render(grid)
-                
+
                 # Agent chooses action (pure exploitation)
                 action_idx = agent.choose_action(state, epsilon=0.0)
                 action = Action(action_idx)
-                
+
                 reward, done = logic.step(action)
                 state = grid.hero_pos
-                
+
                 if not headless:
                     time.sleep(delay)
-            
+
             renderer.render(grid)
             typer.echo(f"Episode {episode + 1} Finished")
             if not headless:
                 time.sleep(0.5)
-            
+
     finally:
         renderer.close()
+
 
 @app.command()
 def human(level: int = 1):
@@ -186,12 +199,12 @@ def human(level: int = 1):
         done = False
         while not done:
             renderer.render(grid)
-            
+
             action, should_quit = renderer.process_input()
             if should_quit:
                 typer.echo("Game quit by user.")
                 break
-            
+
             if action is not None:
                 reward, done = logic.step(action)
                 if done:
@@ -201,12 +214,13 @@ def human(level: int = 1):
                     else:
                         typer.echo(f"Game Over! Reward: {reward}")
                     time.sleep(2.0)
-            
+
             # Small delay to limit CPU usage
             time.sleep(0.01)
 
     finally:
         renderer.close()
+
 
 if __name__ == "__main__":
     app()

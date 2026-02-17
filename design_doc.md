@@ -1,29 +1,24 @@
-# Design Doc: Web Interface for Q-Link RPG
+# Design Doc: Q-Link RPG README Update
 
 ## Objective
-Transform the existing CLI-based Q-Learning RPG into a web application to improve accessibility and visualization.
+Create a professional, high-quality README.md for the Q-Link RPG project that effectively communicates its value, architecture, and usage.
 
-## Architecture
-1.  **Backend (Python/FastAPI):**
-    *   Expose the existing `GameEngine` and `QTable` via REST endpoints.
-    *   Endpoints:
-        *   `GET /state`: Returns current grid, agent position, and score.
-        *   `POST /action`: Accepts an action (move), updates state, returns new state.
-        *   `POST /reset`: Resets the game episode.
-    *   Serve static assets (images, CSS, JS).
-
-2.  **Frontend (HTML/JS):**
-    *   Simple Single Page Application (SPA).
-    *   Canvas or Grid-based rendering using the generated assets.
-    *   Keyboard controls for manual play; "Auto" button for Q-learning agent.
-
-3.  **Assets (Nano Banana):**
-    *   **Background:** Cyberpunk/Circuitry theme.
-    *   **Agent:** Robot/AI avatar.
-    *   **Goal:** Glowing data node or portal.
-    *   **Obstacle:** Firewall or glitch block.
+## Content Structure
+1.  **Header:** Project Name + Catchy Tagline.
+2.  **Introduction:** Brief overview of the Q-Learning Grid World game.
+3.  **Key Features:** List of CLI and Web capabilities.
+4.  **Architecture:** High-level overview of the Engine, AI, and Interfaces.
+5.  **Installation:** Clear instructions using `uv`.
+6.  **Usage:**
+    *   Manual Play (CLI & Web)
+    *   Training the AI
+    *   Watching the AI
+7.  **Development:**
+    *   Running Tests
+    *   The Skywalker Workflow
+8.  **Assets:** Credit to the generated imagery.
+9.  **License:** Standard license info.
 
 ## Toolchain
-*   **Web Framework:** `fastapi`, `uvicorn`
-*   **Template Engine:** `jinja2` (for initial page load)
-*   **Package Manager:** `uv`
+*   **Editor:** Markdown
+*   **Validation:** Visual inspection and link checking.

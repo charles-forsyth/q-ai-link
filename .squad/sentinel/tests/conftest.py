@@ -1,8 +1,8 @@
 import pytest
-import numpy as np
 from unittest.mock import MagicMock
 
 # Shared fixtures for testing
+
 
 @pytest.fixture
 def grid_config():
@@ -14,8 +14,9 @@ def grid_config():
         "goal_pos": (9, 9),
         "walls": [(1, 1), (2, 2)],
         "enemies": [(5, 5)],
-        "level_id": 1
+        "level_id": 1,
     }
+
 
 @pytest.fixture
 def mock_renderer():

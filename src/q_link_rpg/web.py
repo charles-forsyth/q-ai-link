@@ -28,6 +28,7 @@ grid.add_walls(WALLS)
 grid.add_enemies(ENEMIES)
 game = GameLogic(grid)
 
+
 class GameState(BaseModel):
     width: int
     height: int
@@ -38,12 +39,15 @@ class GameState(BaseModel):
     score: int = 0
     game_over: bool = False
 
+
 current_score = 0
 game_over = False
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
+
 
 @app.get("/api/state", response_model=GameState)
 async def get_state():
@@ -55,35 +59,37 @@ async def get_state():
         walls=list(grid.walls),
         enemies=list(grid.enemies),
         score=current_score,
-        game_over=game_over
+        game_over=game_over,
     )
+
 
 @app.post("/api/action/{action_id}")
 async def take_action(action_id: int):
     global current_score, game_over
     if game_over:
         return await get_state()
-    
+
     try:
         action = Action(action_id)
         reward, done = game.step(action)
         current_score += reward
         game_over = done
     except ValueError:
-        pass # Invalid action
-        
+        pass  # Invalid action
+
     return await get_state()
+
 
 @app.post("/api/reset")
 async def reset_game():
     global current_score, game_over, grid, game
-    
+
     # Re-init grid to reset enemies
     grid = GridWorld(DEFAULT_WIDTH, DEFAULT_HEIGHT, START_POS, GOAL_POS)
     grid.add_walls(WALLS)
     grid.add_enemies(ENEMIES)
     game = GameLogic(grid)
-    
+
     current_score = 0
     game_over = False
     return await get_state()
