@@ -1,7 +1,7 @@
 [project]
 name = "q-link-rpg"
-version = "0.1.1"
-description = "Add your description here"
+version = "0.1.2"
+description = "A 2D tile-based Grid World game using Pygame with Q-Learning AI"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,6 +10,14 @@ dependencies = [
     "typer>=0.9.0",
 ]
 
+[project.scripts]
+q-link = "q_link_rpg.cli:app"
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+testpaths = ["tests"]
 
+[dependency-groups]
+dev = [
+    "pytest-mock>=3.15.1",
+]
